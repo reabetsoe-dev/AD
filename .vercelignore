@@ -1,0 +1,11 @@
+.git/
+.demo/
+.next/
+node_modules/
+.env*
+private-storage/
+public/uploads/
+test-results/
+playwright-report/
+coverage/
+tsconfig.tsbuildinfo

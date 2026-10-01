@@ -1,0 +1,54 @@
+{
+  "name": "ad-digital-platform-demo",
+  "version": "0.1.0",
+  "private": true,
+  "engines": {
+    "node": "22.x"
+  },
+  "scripts": {
+    "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "build": "next build",
+    "vercel-build": "prisma generate && prisma migrate deploy && next build",
+    "postinstall": "prisma generate",
+    "start": "next start --hostname 127.0.0.1 --port 3000",
+    "lint": "eslint .",
+    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "db:setup": "node scripts/setup.mjs",
+    "db:start": "node scripts/database.mjs start",
+    "db:stop": "node scripts/database.mjs stop",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:seed": "tsx prisma/seed.ts",
+    "demo:setup": "npm run db:setup && prisma generate && npm run db:migrate && npm run db:seed"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.0",
+    "@vercel/blob": "^2.8.0",
+    "better-auth": "^1.6.0",
+    "lucide-react": "^0.577.0",
+    "next": "^16.2.0",
+    "papaparse": "^5.5.3",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "@types/node": "^22.0.0",
+    "@types/papaparse": "^5.3.16",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.2.0",
+    "prisma": "6.19.0",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "@prisma/config": {
+      "effect": "^3.20.0",
+      "deepmerge-ts": "^8.0.0"
+    }
+  }
+}

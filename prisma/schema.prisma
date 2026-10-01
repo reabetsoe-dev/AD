@@ -1,0 +1,257 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+enum Role {
+  SUPER_ADMIN
+  ADMIN
+  FINANCE_OFFICER
+  MEDIA_MANAGER
+  EDITOR
+  SECRETARY_GENERAL
+  AUDITOR
+}
+enum ReviewStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ACCEPTED
+  REJECTED
+  PENDING_VERIFICATION
+  VERIFIED
+}
+enum PaymentStatus {
+  PENDING
+  PROCESSING
+  SUCCESSFUL
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+enum DownloadType {
+  FREE
+  PAID
+}
+model User {
+  id                     String @id
+  name                   String
+  email                  String @unique
+  emailVerified          Boolean @default(false)
+  image                  String?
+  role                   Role @default(SECRETARY_GENERAL)
+  disabled               Boolean @default(false)
+  assignedConstituencyId  String?
+  assignedConstituency    Constituency? @relation(fields: [assignedConstituencyId], references: [id])
+  sessions               Session[]
+  accounts               Account[]
+  submissions            MembershipSubmission[]
+  collections            CollectionReport[] @relation("SubmittedCollections")
+  verifications          CollectionReport[] @relation("VerifiedCollections")
+  auditLogs              AuditLog[]
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  @@index([assignedConstituencyId])
+}
+model Session {
+  id        String @id
+  expiresAt DateTime
+  token     String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId])
+}
+model Account {
+  id                    String @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  @@index([userId])
+  @@unique([providerId, accountId])
+}
+model Verification {
+  id         String @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  @@index([identifier])
+}
+model RateLimit {
+  id          String @id @default(cuid())
+  key         String @unique
+  count       Int
+  lastRequest BigInt
+}
+model Constituency {
+  id          String @id @default(cuid())
+  name        String
+  code        String @unique
+  district    String?
+  status      String @default("DEMO")
+  users       User[]
+  members     Member[]
+  submissions MembershipSubmission[]
+  collections CollectionReport[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+model Member {
+  id               String @id @default(cuid())
+  memberNumber     String
+  firstName        String
+  lastName         String
+  phone            String?
+  membershipStatus String @default("ACTIVE")
+  joinedAt         DateTime @default(now())
+  constituencyId   String
+  constituency     Constituency @relation(fields:[constituencyId], references:[id])
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  @@unique([constituencyId, memberNumber])
+  @@index([constituencyId, membershipStatus])
+}
+model MembershipSubmission {
+  id             String @id @default(cuid())
+  constituencyId String
+  constituency   Constituency @relation(fields:[constituencyId], references:[id])
+  submittedById  String
+  submittedBy    User @relation(fields:[submittedById], references:[id])
+  reportingPeriod String
+  memberCount    Int
+  status         ReviewStatus @default(SUBMITTED)
+  notes          String?
+  snapshot       Json
+  sourceKey      String?
+  submittedAt    DateTime @default(now())
+  @@index([constituencyId, submittedAt])
+}
+model CollectionReport {
+  id                  String @id @default(cuid())
+  constituencyId      String
+  constituency        Constituency @relation(fields:[constituencyId], references:[id])
+  submittedById       String
+  submittedBy         User @relation("SubmittedCollections",fields:[submittedById], references:[id])
+  reportingPeriod     String
+  expectedAmount      Decimal @db.Decimal(12,2)
+  reportedAmount      Decimal @db.Decimal(12,2)
+  verifiedAmount      Decimal? @db.Decimal(12,2)
+  currency            String @default("LSL")
+  paymentMethod       String @default("DEMO M-PESA")
+  paymentReference    String
+  status              ReviewStatus @default(PENDING_VERIFICATION)
+  notes               String?
+  supportingKey       String?
+  verifiedById        String?
+  verifiedBy          User? @relation("VerifiedCollections",fields:[verifiedById], references:[id])
+  verifiedAt          DateTime?
+  verificationNotes   String?
+  submittedAt         DateTime @default(now())
+  @@index([constituencyId, status])
+  @@index([status, submittedAt])
+}
+model Track {
+  id              String @id @default(cuid())
+  slug            String @unique
+  title           String
+  artist          String
+  description     String
+  artwork         String @default("/ad-logo.png")
+  audioStorageKey String
+  previewUrl      String
+  price           Decimal @db.Decimal(12,2)
+  currency        String @default("LSL")
+  isPublished     Boolean @default(false)
+  archived        Boolean @default(false)
+  downloadType    DownloadType @default(FREE)
+  category        String @default("Instrumental")
+  releaseDate     DateTime @default(now())
+  purchases       MusicPurchase[]
+  downloads       Download[]
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@index([isPublished, archived])
+}
+model MusicPurchase {
+  id             String @id @default(cuid())
+  trackId        String
+  track          Track @relation(fields:[trackId],references:[id])
+  customerHash   String
+  phoneMasked    String
+  amount         Decimal @db.Decimal(12,2)
+  currency       String
+  status         PaymentStatus @default(PENDING)
+  transaction    PaymentTransaction?
+  entitlement    DownloadEntitlement?
+  createdAt      DateTime @default(now())
+  @@index([customerHash])
+}
+model PaymentTransaction {
+  id                    String @id @default(cuid())
+  purchaseId            String @unique
+  purchase              MusicPurchase @relation(fields:[purchaseId],references:[id])
+  provider              String
+  providerTransactionId String @unique
+  status                PaymentStatus @default(PENDING)
+  amount                Decimal @db.Decimal(12,2)
+  currency              String
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  @@index([status, createdAt])
+}
+model DownloadEntitlement {
+  id         String @id @default(cuid())
+  purchaseId String @unique
+  purchase   MusicPurchase @relation(fields:[purchaseId],references:[id])
+  createdAt  DateTime @default(now())
+}
+model Download {
+  id        String @id @default(cuid())
+  trackId   String
+  track     Track @relation(fields:[trackId],references:[id])
+  createdAt DateTime @default(now())
+  @@index([trackId])
+}
+model Content {
+  id          String @id @default(cuid())
+  kind        String
+  title       String
+  summary     String
+  body        String
+  image       String?
+  storageKey  String?
+  isPublished Boolean @default(false)
+  eventDate   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  @@index([kind, isPublished])
+}
+model AuditLog {
+  id          String @id @default(cuid())
+  actorUserId String?
+  actorUser   User? @relation(fields:[actorUserId],references:[id])
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  @@index([createdAt])
+  @@index([actorUserId])
+}
