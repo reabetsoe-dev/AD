@@ -1,4 +1,13 @@
 import { db } from "./db";
+import { extname } from "node:path";
+import { mediaCategoryFor, mediaLinkUrl, type MediaCategory } from "./media";
+import {
+  contentAttachmentCategories,
+  mimeTypeForExtension,
+  uploadCategoryFromPath,
+  type UploadCategory,
+} from "./upload-rules";
+
 export async function publicTracks() {
   const rows = await db.track.findMany({
     where: { isPublished: true, archived: false },
@@ -25,6 +34,13 @@ export async function publicTracks() {
   }));
 }
 export type PublicTrack = Awaited<ReturnType<typeof publicTracks>>[number];
+export type PublicAttachment = {
+  category: UploadCategory;
+  extension: string;
+  mimeType: string;
+  url: string;
+  downloadUrl: string;
+};
 export type PublicContent = {
   id: string;
   kind: string;
@@ -34,7 +50,27 @@ export type PublicContent = {
   image: string | null;
   eventDate: string | null;
   createdAt: string;
+  hasAttachment: boolean;
+  attachment: PublicAttachment | null;
+  mediaCategory: MediaCategory | null;
+  externalUrl: string | null;
 };
+
+function publicAttachment(id: string, storageKey: string | null) {
+  if (!storageKey) return null;
+  const category = uploadCategoryFromPath(storageKey, contentAttachmentCategories);
+  if (!category) return null;
+  const extension = extname(storageKey).toLowerCase();
+  const path = `/api/documents/${encodeURIComponent(id)}`;
+  return {
+    category,
+    extension,
+    mimeType: mimeTypeForExtension(extension),
+    url: `${path}?inline=1`,
+    downloadUrl: path,
+  };
+}
+
 export async function publicContent(kind?: string): Promise<PublicContent[]> {
   const rows = await db.content.findMany({
     where: { isPublished: true, ...(kind ? { kind } : {}) },
@@ -47,12 +83,24 @@ export async function publicContent(kind?: string): Promise<PublicContent[]> {
       image: true,
       eventDate: true,
       createdAt: true,
+      storageKey: true,
+      mediaCategory: true,
+      externalUrl: true,
     },
     orderBy: { createdAt: "desc" },
   });
-  return rows.map((c) => ({
-    ...c,
-    eventDate: c.eventDate?.toISOString() || null,
-    createdAt: c.createdAt.toISOString(),
-  }));
+  return rows.map(({ storageKey, ...c }) => {
+    const attachment = publicAttachment(c.id, storageKey);
+    return {
+      ...c,
+      hasAttachment: !!storageKey,
+      attachment,
+      mediaCategory: c.kind === "media"
+        ? mediaCategoryFor({ ...c, attachmentCategory: attachment?.category })
+        : null,
+      externalUrl: mediaLinkUrl(c.externalUrl),
+      eventDate: c.eventDate?.toISOString() || null,
+      createdAt: c.createdAt.toISOString(),
+    };
+  });
 }

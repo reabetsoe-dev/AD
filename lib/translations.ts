@@ -1,7 +1,7 @@
 export const translations = {
   EN: {
     home: "Home",
-    about: "About AD",
+    about: "The Manifesto",
     leadership: "Leadership",
     policies: "Policies",
     manifesto: "Manifesto",
@@ -18,17 +18,19 @@ export const translations = {
     tagline: "Lekhotla la Kopano ea Sechaba",
     intro:
       "Stay connected with the Alliance of Democrats. Find media, resources and constituency services in one place.",
-    discover: "Discover AD",
+    discover: "Read the Manifesto",
+    checkVoterRegistration: "Check Voter Registration",
     read: "Read article",
-    aboutTitle: "One platform. A closer connection.",
+    aboutTitle: "The Manifesto",
     aboutIntro:
-      "Information, membership and constituency services, bringing our community closer together.",
-    explore: "More about AD",
+      "Read the public commitments, priorities and standards guiding AD's work across Lesotho.",
+    explore: "Read the manifesto",
     mediaIntro: "Stories, moments and sound",
     mediaDescription:
       "Explore the media library for photos, videos and audio releases.",
     audioLibrary: "Audio library",
     listen: "Explore music",
+    viewEvents: "View events",
     viewMedia: "View media",
     quickTitle: "Stay connected",
     quickIntro: "Find updates, resources and constituency services.",
@@ -57,6 +59,29 @@ export const translations = {
     services: "Services",
     aboutBody:
       "Alliance of Democrats (AD), Lesotho. Lekhotla la Kopano ea Sechaba. Pele-Feela.",
+    manifestoPageTitle: "The Manifesto",
+    manifestoPageDescription:
+      "The public commitments and governing priorities that guide the Alliance of Democrats.",
+    manifestoStatementTitle:
+      "A practical programme for accountable service and shared progress.",
+    manifestoLead:
+      "The manifesto sets out the commitments, priorities and public standards that explain what AD is working toward.",
+    manifestoAccountabilityTitle: "Accountable government",
+    manifestoAccountabilityText:
+      "Public decisions should be open, lawful and easy for citizens to follow.",
+    manifestoServicesTitle: "Community-first services",
+    manifestoServicesText:
+      "Constituency work should connect people to information, membership support and local services.",
+    manifestoOpportunityTitle: "Opportunity and work",
+    manifestoOpportunityText:
+      "Economic policy should help families, workers and small enterprises build secure futures.",
+    manifestoParticipationTitle: "Public participation",
+    manifestoParticipationText:
+      "The manifesto belongs in everyday civic participation, not only in campaign season.",
+    manifestoBody:
+      "AD's manifesto is presented as a living public reference: listen to communities, publish clear priorities, organise local work and report back honestly on progress.",
+    manifestoDocumentsCta: "View documents",
+    downloadManifesto: "Download attachment",
     overview: "Overview",
     membership: "Membership",
     collections: "Collections",
@@ -72,7 +97,7 @@ export const translations = {
   },
   ST: {
     home: "Lehae",
-    about: "Ka AD",
+    about: "Manifesto",
     leadership: "Boetapele",
     policies: "Maano",
     manifesto: "Manifesto",
@@ -89,17 +114,19 @@ export const translations = {
     tagline: "Lekhotla la Kopano ea Sechaba",
     intro:
       "Lehae la dijithale la Alliance of Democrats. Fumana mecha ea litaba, lisebelisoa le litšebeletso tsa mabatooa.",
-    discover: "Tseba AD",
+    discover: "Bala Manifesto",
+    checkVoterRegistration: "Hlahloba ngoliso ea mokhethi",
     read: "Bala sengoloa",
-    aboutTitle: "Sethala se le seng. Khokahano e haufi.",
+    aboutTitle: "Manifesto",
     aboutIntro:
-      "Tlhahisoleseling, litho le litšebeletso tsa mabatooa, tse re atametsang hammoho.",
-    explore: "Tseba haholoanyane ka AD",
+      "Bala manifesto ea Alliance of Democrats le lenaneo la eona bakeng sa Lesotho.",
+    explore: "Bala manifesto",
     mediaIntro: "Lipale, linako le molumo",
     mediaDescription:
       "Sheba laeborari ea mecha ea litaba bakeng sa linepe, livideo le 'mino.",
     audioLibrary: "Laeborari ea 'mino",
     listen: "Sheba 'mino",
+    viewEvents: "Sheba liketsahalo",
     viewMedia: "Sheba mecha ea litaba",
     quickTitle: "Lula u hokahane",
     quickIntro: "Fumana litaba, lisebelisoa le litšebeletso tsa mabatooa.",
@@ -128,6 +155,29 @@ export const translations = {
     services: "Litšebeletso",
     aboutBody:
       "Alliance of Democrats (AD), Lesotho. Lekhotla la Kopano ea Sechaba. Pele-Feela.",
+    manifestoPageTitle: "Manifesto",
+    manifestoPageDescription:
+      "Boitlamo ba setjhaba le dintho tse tlang pele tse tataisang Alliance of Democrats.",
+    manifestoStatementTitle:
+      "Lenaneo le sebetsang la boikarabelo, ditshebeletso le kgatelopele.",
+    manifestoLead:
+      "Manifesto e bontsha boitlamo, dintho tse tlang pele le maemo a setjhaba ao AD e sebeletsang ho ona.",
+    manifestoAccountabilityTitle: "Mmuso o ikarabellang",
+    manifestoAccountabilityText:
+      "Diqeto tsa setjhaba di lokela ho buleha, ho latela molao le ho utlwahala ho baahi.",
+    manifestoServicesTitle: "Ditshebeletso tsa setjhaba",
+    manifestoServicesText:
+      "Mosebetsi wa mabatooa o lokela ho hokahanya batho le tlhahisoleseding, tshehetso ya ditho le ditshebeletso.",
+    manifestoOpportunityTitle: "Menyetla le mosebetsi",
+    manifestoOpportunityText:
+      "Maano a moruo a lokela ho thusa malapa, basebetsi le dikgwebo tse nyane ho aha bokamoso bo sireletsehileng.",
+    manifestoParticipationTitle: "Ho nka karolo ha setjhaba",
+    manifestoParticipationText:
+      "Manifesto e lokela ho phela kamehla ka ho nka karolo ha baahi, eseng feela nakong ya dikgetho.",
+    manifestoBody:
+      "Manifesto ya AD ke tataiso e phelang: mamela setjhaba, phatlalatsa dintho tse tlang pele, hlophisa mosebetsi wa lehae mme o tlalehe kgatelopele ka botshepehi.",
+    manifestoDocumentsCta: "Sheba ditokomane",
+    downloadManifesto: "Khoasolla sephutheloana",
     overview: "Kakaretso",
     membership: "Litho",
     collections: "Likoleke",

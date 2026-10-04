@@ -133,6 +133,8 @@ export async function workspaceData(area: "admin" | "portal", section: string) {
       role: user.role,
       assignedConstituencyId: user.assignedConstituencyId,
       constituency: user.assignedConstituency?.name || null,
+      branch: user.assignedConstituency?.branch || null,
+      district: user.assignedConstituency?.district || null,
     },
     canVerify: can(user.role, "VERIFY_PAYMENTS"),
     canReview: can(user.role, "REVIEW_MEMBERSHIP"),

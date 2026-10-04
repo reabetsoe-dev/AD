@@ -31,7 +31,11 @@ export async function GET(
         ? "audio/wav"
         : extension === ".ogg"
           ? "audio/ogg"
-          : "audio/mpeg";
+          : extension === ".m4a"
+            ? "audio/mp4"
+            : extension === ".flac"
+              ? "audio/flac"
+              : "audio/mpeg";
     return new Response(stream, {
       headers: {
         "Content-Type": type,

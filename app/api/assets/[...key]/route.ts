@@ -20,10 +20,14 @@ export async function GET(
       ".mp3": "audio/mpeg",
       ".wav": "audio/wav",
       ".ogg": "audio/ogg",
+      ".m4a": "audio/mp4",
+      ".flac": "audio/flac",
       ".png": "image/png",
       ".jpg": "image/jpeg",
       ".jpeg": "image/jpeg",
       ".webp": "image/webp",
+      ".gif": "image/gif",
+      ".avif": "image/avif",
     };
     const contentType = types[extname(key)];
     if (!contentType) throw new HttpError(404, "File not found.");

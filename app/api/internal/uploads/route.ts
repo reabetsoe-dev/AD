@@ -31,14 +31,20 @@ export async function POST(request: Request) {
         isPublic: z.boolean(),
       })
       .parse(JSON.parse(body.payload.clientPayload));
+    const canManageContentMedia =
+      can(user.role, "MANAGE_CONTENT") || can(user.role, "MANAGE_MEDIA");
     const allowed =
-      category === "audio"
-        ? can(user.role, "MANAGE_MUSIC")
-        : category === "csv"
-          ? can(user.role, "SUBMIT_CONSTITUENCY_MEMBERSHIP")
-          : can(user.role, "MANAGE_CONTENT") ||
-            can(user.role, "MANAGE_MEDIA") ||
-            (category === "image" && can(user.role, "MANAGE_MUSIC"));
+      category === "csv"
+        ? can(user.role, "SUBMIT_CONSTITUENCY_MEMBERSHIP")
+        : category === "audio"
+          ? can(user.role, "MANAGE_MUSIC") || canManageContentMedia
+          : category === "image"
+            ? canManageContentMedia || can(user.role, "MANAGE_MUSIC")
+            : category === "document" ||
+                category === "video" ||
+                category === "archive"
+              ? canManageContentMedia
+              : false;
     if (!allowed) throw new HttpError(403, "You cannot upload this file type.");
     const rules = uploadRules[category];
     const prefix = `${isPublic ? "public" : "private"}/${category}/${user.id}/`;
@@ -56,7 +62,7 @@ export async function POST(request: Request) {
       request,
       body,
       onBeforeGenerateToken: async () => ({
-        allowedContentTypes: rules.types,
+        allowedContentTypes: [...rules.types],
         maximumSizeInBytes: rules.limit,
         addRandomSuffix: false,
         allowOverwrite: false,

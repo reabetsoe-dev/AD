@@ -138,7 +138,7 @@ test("event creation, editing and removal work alongside account actions", async
   await dialog.getByLabel("Summary", { exact: true }).fill("Temporary event check");
   await dialog.getByLabel("Content", { exact: true }).fill("Temporary event created during browser verification.");
   await dialog.getByLabel("Event date", { exact: true }).fill("2026-10-15T10:00");
-  await dialog.getByLabel("Upload file (PDF, max 10 MB)", { exact: true }).setInputFiles({
+  await dialog.getByLabel("Upload attachment (documents, photos, video, audio, archives)", { exact: true }).setInputFiles({
     name: "event-file.pdf",
     mimeType: "application/pdf",
     buffer: Buffer.from("%PDF-1.4\nTemporary event upload\n%%EOF"),

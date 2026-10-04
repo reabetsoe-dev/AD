@@ -17,10 +17,13 @@ claim that every production feature in the long brief is finished.
 7. RBAC: seven roles with named permissions; enforced by route handlers and
    workspace loaders. Normal Admin cannot create/manage Super Admins.
 8. Isolation: Secretary General constituency derives from the database user;
-   reads, writes, import, submissions, collections and exports share that scope.
-9. Membership: add/edit permitted records and submit immutable member snapshots.
-10. CSV: server parse/validate, row errors, preview, confirmation and transaction.
-    The fictional template and downloadable error report are provided.
+   reads, writes, submissions, collections and exports share that scope.
+9. Membership: require first name, surname, sex, ID/IEC number, village,
+   membership-card number and phone; require constituency branch and district;
+   hide the member-number list column and submit immutable member snapshots.
+10. PDF exports: internal records render audited PDF reports instead of CSV
+    downloads. Membership exports and submitted forms use the supplied branded
+    landscape layout with Sesotho headings, ruled rows and continuation pages.
 11. Collections: pending reports, independent demo Finance verification/rejection,
     notes, verifier and timestamps; entered references alone never verify.
 12. Music: search/category/type filters, artwork, previews, player and free/paid
@@ -32,7 +35,7 @@ claim that every production feature in the long brief is finished.
 15. Mock M-Pesa: clearly labelled pending/success/failure demonstration. Signed
     events validate purchase/amount/currency/reference/time. No real money moves.
 16. Finance: collection reconciliation summary, independent amounts, status
-    filtering, basic CSV exports and music transactions. Full accounting,
+    filtering, basic PDF exports and music transactions. Full accounting,
     refund and adjustment workflows remain deferred.
 17. Audit: login and sensitive changes/imports/reviews/payments/downloads/exports.
     External tamper resistance and failed-login audits remain follow-up work.

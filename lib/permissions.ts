@@ -51,6 +51,7 @@ export function scopeFor(user: {
 export const sections = [
   { key: "dashboard", label: "Overview", permission: null },
   { key: "events", label: "Events", permission: "MANAGE_CONTENT" },
+  { key: "manifesto", label: "Manifesto", permission: "MANAGE_CONTENT" },
   { key: "media", label: "Media", permission: "MANAGE_MEDIA" },
   { key: "music", label: "Music", permission: "MANAGE_MUSIC" },
   { key: "documents", label: "Documents", permission: "MANAGE_CONTENT" },

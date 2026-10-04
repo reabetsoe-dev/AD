@@ -39,7 +39,15 @@ import { usePlatform } from "./platform-provider";
 import type { WorkspaceData } from "@/lib/workspace";
 import { money } from "./public-pages";
 import type { TranslationKey } from "@/lib/translations";
-import { uploadRules } from "@/lib/upload-rules";
+import {
+  acceptedTypesFor,
+  contentAttachmentCategories,
+  uploadCategoryForFile,
+  uploadCategoryFromPath,
+  uploadRules,
+  type UploadCategory,
+} from "@/lib/upload-rules";
+import { mediaCategories, mediaLabels, mediaCategoryFor, mediaUploadCategories, type MediaCategory } from "@/lib/media";
 type Row = {
   id: string;
   title?: string;
@@ -48,6 +56,8 @@ type Row = {
   body?: string;
   image?: string | null;
   storageKey?: string | null;
+  mediaCategory?: string | null;
+  externalUrl?: string | null;
   kind?: string;
   email?: string;
   role?: string;
@@ -57,12 +67,17 @@ type Row = {
   constituency?: { name: string };
   code?: string;
   district?: string | null;
+  branch?: string | null;
   memberNumber?: string;
   firstName?: string;
   lastName?: string;
   phone?: string;
+  gender?: string | null;
+  idNumber?: string | null;
+  village?: string | null;
   membershipStatus?: string;
   reportingPeriod?: string;
+  constituencyName?: string | null;
   memberCount?: number;
   status?: string;
   expectedAmount?: string;
@@ -98,6 +113,7 @@ const icons: Record<string, typeof LayoutDashboard> = {
   media: Image,
   music: Music2,
   documents: FileText,
+  manifesto: FileText,
   constituencies: MapPin,
   membership: Users,
   submit: Upload,
@@ -120,7 +136,18 @@ const labels: Record<string, TranslationKey> = {
   media: "media",
   music: "music",
   documents: "documents",
+  manifesto: "manifesto",
 };
+const contentAttachmentResources = [
+  "events",
+  "manifesto",
+  "documents",
+  "media",
+];
+const contentAttachmentAccept = acceptedTypesFor(contentAttachmentCategories);
+function supportsContentAttachment(resource: string) {
+  return contentAttachmentResources.includes(resource);
+}
 async function api(
   resource: string,
   body: unknown | FormData,
@@ -237,6 +264,7 @@ export function Workspace({ data }: { data: WorkspaceData }) {
       "events",
       "media",
       "documents",
+      "manifesto",
     ].includes(section);
   const editableResources = [
     "members",
@@ -248,6 +276,7 @@ export function Workspace({ data }: { data: WorkspaceData }) {
     "events",
     "media",
     "documents",
+    "manifesto",
   ];
   function formKind(resourceName: string) {
     return resourceName === "members"
@@ -297,7 +326,7 @@ export function Workspace({ data }: { data: WorkspaceData }) {
   }
   const columns =
     resource === "members"
-      ? ["Member", "Member number", "Constituency", "Status"]
+      ? ["Member", "Constituency", "Status"]
       : resource === "submissions"
         ? ["Reporting period", "Constituency", "Members", "Status"]
         : resource === "collections" || resource === "reports"
@@ -313,14 +342,16 @@ export function Workspace({ data }: { data: WorkspaceData }) {
             ? ["Track", "Amount", "Reference", "Status", "Date"]
             : resource === "music"
               ? ["Track", "Type", "Price", "Downloads", "Status"]
-              : resource === "users"
-                ? ["User", "Role", "Constituency", "Status"]
+                : resource === "users"
+                  ? ["User", "Role", "Constituency", "Status"]
                 : resource === "constituencies"
-                  ? ["Constituency", "Code", "Members", "Status"]
+                  ? ["Constituency", "Number", "Members"]
                   : resource === "audit"
                     ? ["Action", "Actor", "Entity", "Date"]
                     : resource === "events"
                       ? ["Title", "Event date", "Status", "Created"]
+                      : resource === "media"
+                        ? ["Title", "Category", "Source", "Status", "Date"]
                       : ["Title", "Type", "Status", "Date"];
   function cells(r: Row) {
     if (resource === "members")
@@ -331,7 +362,6 @@ export function Workspace({ data }: { data: WorkspaceData }) {
           </strong>
           {r.phone && <small>{r.phone}</small>}
         </span>,
-        r.memberNumber,
         r.constituency?.name,
         <Status key="status" value={r.membershipStatus} />,
       ];
@@ -390,13 +420,20 @@ export function Workspace({ data }: { data: WorkspaceData }) {
         r.name,
         r.code,
         r._count?.members || 0,
-        <Status key="status" value="DEMO" />,
       ];
     if (resource === "audit")
       return [
         r.action,
         r.actorUser?.name || "Test customer",
         r.entityType,
+        date(r.createdAt),
+      ];
+    if (resource === "media")
+      return [
+        r.title,
+        mediaLabels[mediaCategoryFor({ ...r, attachmentCategory: r.storageKey ? uploadCategoryFromPath(r.storageKey) : null })],
+        r.externalUrl ? "Link" : "File",
+        <Status key="status" value={r.isPublished ? "PUBLISHED" : "DRAFT"} />,
         date(r.createdAt),
       ];
     return [
@@ -726,21 +763,12 @@ export function Workspace({ data }: { data: WorkspaceData }) {
                   </button>
                   <a
                     className="icon-button"
-                    title="Export CSV"
-                    aria-label="Export CSV"
-                    href={`/api/internal/${resource}?export=csv`}
+                    title="Export PDF"
+                    aria-label="Export PDF"
+                    href={`/api/internal/${resource}?export=pdf`}
                   >
                     <Download size={18} />
                   </a>
-                  {section === "membership" && area === "portal" && (
-                    <button
-                      className="button button-outline"
-                      onClick={() => setDialog("import")}
-                    >
-                      <Upload size={16} />
-                      Import CSV
-                    </button>
-                  )}
                   {mayCreate && section !== "submit" && (
                     <button
                       className="button button-red"
@@ -838,6 +866,16 @@ export function Workspace({ data }: { data: WorkspaceData }) {
                         ))}
                         <td className="table-action">
                           <div className="row-actions">
+                            {["submissions", "constituencies"].includes(resource) && (
+                              <a
+                                className="icon-button"
+                                title="Download membership form PDF"
+                                aria-label={`Download membership form PDF for ${rowName(row)}`}
+                                href={`/api/internal/${resource}?export=pdf&id=${encodeURIComponent(row.id)}`}
+                              >
+                                <Download size={17} />
+                              </a>
+                            )}
                             {resource === "collections" &&
                               data.canVerify &&
                               row.status === "PENDING_VERIFICATION" && (
@@ -944,19 +982,15 @@ export function Workspace({ data }: { data: WorkspaceData }) {
           Alliance of Democrats · AD Digital Platform
         </footer>
       </div>
-      {dialog === "import" ? (
-        <ImportDialog onClose={close} onSaved={saved} />
-      ) : (
-        dialog && (
-          <RecordForm
-            kind={dialog}
-            resource={resource}
-            row={edit}
-            data={data}
-            onClose={close}
-            onSaved={saved}
-          />
-        )
+      {dialog && (
+        <RecordForm
+          kind={dialog}
+          resource={resource}
+          row={edit}
+          data={data}
+          onClose={close}
+          onSaved={saved}
+        />
       )}
       {removeTarget && (
         <RemoveDialog
@@ -1143,7 +1177,12 @@ function RecordForm({
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
     [type, setType] = useState(row?.downloadType || "FREE"),
-    [role, setRole] = useState(row?.role || "SECRETARY_GENERAL");
+    [role, setRole] = useState(row?.role || "SECRETARY_GENERAL"),
+    [mediaCategory, setMediaCategory] = useState<MediaCategory>(mediaCategoryFor({
+      ...row,
+      attachmentCategory: row?.storageKey ? uploadCategoryFromPath(row.storageKey) : null,
+    })),
+    [mediaSource, setMediaSource] = useState(row?.externalUrl ? "link" : "file");
   const title =
     kind === "verify"
       ? "Review collection"
@@ -1151,7 +1190,7 @@ function RecordForm({
         ? "Review membership submission"
         : kind === "submission"
           ? "Submit membership report"
-          : `${row ? "Edit" : "New"} ${kind === "content" && resource === "events" ? "event" : kind}`;
+          : `${row ? "Edit" : "New"} ${kind === "content" && resource === "events" ? "event" : kind === "content" && resource === "manifesto" ? "manifesto" : kind === "content" && resource === "media" ? "media" : kind}`;
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setBusy(true);
@@ -1161,14 +1200,33 @@ function RecordForm({
       if (row) form.set("id", row.id);
       if (data.cloudUploads && (kind === "track" || kind === "content")) {
         const { upload } = await import("@vercel/blob/client");
-        for (const [field, category, isPublic] of [
-          ["audio", "audio", false],
-          ["preview", "audio", true],
-          ["artwork", "image", true],
-          ["attachment", "document", false],
-        ] as const) {
-          const file = form.get(field);
+        const uploadFields: {
+          field: string;
+          isPublic: boolean;
+          category?: UploadCategory;
+          categories?: readonly UploadCategory[];
+        }[] = [
+          { field: "audio", category: "audio", isPublic: false },
+          { field: "preview", category: "audio", isPublic: true },
+          { field: "artwork", category: "image", isPublic: true },
+          {
+            field: "attachment",
+            categories: resource === "media" ? mediaUploadCategories[mediaCategory] : contentAttachmentCategories,
+            isPublic: false,
+          },
+        ];
+        for (const uploadField of uploadFields) {
+          const file = form.get(uploadField.field);
           if (!(file instanceof File) || !file.size) continue;
+          const category =
+            uploadField.category ||
+            uploadCategoryForFile(
+              file.name,
+              file.type,
+              uploadField.categories || contentAttachmentCategories,
+            );
+          if (!category)
+            throw new Error("Unsupported attachment file type or size.");
           const rules = uploadRules[category];
           const extension = file.name
             .slice(file.name.lastIndexOf("."))
@@ -1179,21 +1237,25 @@ function RecordForm({
             file.size > rules.limit
           )
             throw new Error(`Invalid ${category} file type or size.`);
-          const pathname = `${isPublic ? "public" : "private"}/${category}/${data.user.id}/${crypto.randomUUID()}${extension}`;
+          const pathname = `${uploadField.isPublic ? "public" : "private"}/${category}/${data.user.id}/${crypto.randomUUID()}${extension}`;
           const blob = await upload(pathname, file, {
             access: "private",
             handleUploadUrl: "/api/internal/uploads",
             contentType: file.type,
             multipart: true,
-            clientPayload: JSON.stringify({ category, isPublic }),
+            clientPayload: JSON.stringify({
+              category,
+              isPublic: uploadField.isPublic,
+            }),
           });
-          form.set(field, blob.pathname);
+          form.set(uploadField.field, blob.pathname);
         }
       }
       let endpoint = resource;
       let body: unknown = form;
-      const isEventContent = kind === "content" && resource === "events";
-      if (kind === "track" || isEventContent) {
+      const contentUpload =
+        kind === "content" && supportsContentAttachment(resource);
+      if (kind === "track" || contentUpload) {
         form.set("isPublished", form.has("isPublished") ? "true" : "");
         if (kind === "track")
           form.set("archived", form.has("archived") ? "true" : "");
@@ -1215,7 +1277,9 @@ function RecordForm({
       if (kind === "collection" || kind === "verify") endpoint = "collections";
       if (kind === "submission" || kind === "review") endpoint = "submissions";
       if (kind === "track") endpoint = "music";
-      await api(endpoint, body);
+      const result = await api(endpoint, body);
+      if (kind === "submission" && !row && result.downloadUrl)
+        window.location.assign(result.downloadUrl);
       onSaved(
         kind === "verify"
           ? "Collection simulation reviewed. No money transferred."
@@ -1236,19 +1300,9 @@ function RecordForm({
       <form className="form" onSubmit={submit}>
         {kind === "member" && (
           <>
-            <label>
-              Member number
-              <input
-                name="memberNumber"
-                defaultValue={row?.memberNumber}
-                required
-                maxLength={40}
-                pattern="[A-Za-z0-9-]+"
-              />
-            </label>
             <div className="form-grid">
               <label>
-                First name
+                First name (Lebitso)
                 <input
                   name="firstName"
                   defaultValue={row?.firstName}
@@ -1257,7 +1311,7 @@ function RecordForm({
                 />
               </label>
               <label>
-                Last name
+                Surname (Fane)
                 <input
                   name="lastName"
                   defaultValue={row?.lastName}
@@ -1266,15 +1320,41 @@ function RecordForm({
                 />
               </label>
             </div>
+            <div className="form-grid">
+              <label>
+                Sex (M/F)
+                <select name="gender" defaultValue={row?.gender || ""} required>
+                  <option value="">Select</option>
+                  <option value="M">Male (M)</option>
+                  <option value="F">Female (F)</option>
+                </select>
+              </label>
+              <label>
+                ID or IEC number
+                <input name="idNumber" defaultValue={row?.idNumber || ""} required maxLength={40} pattern="[A-Za-z0-9 -]+" />
+              </label>
+            </div>
             <label>
-              Phone (optional)
-              <input
-                name="phone"
-                defaultValue={row?.phone}
-                inputMode="tel"
-                maxLength={24}
-              />
+              Village (Motse)
+              <input name="village" defaultValue={row?.village || ""} required maxLength={100} />
             </label>
+            <div className="form-grid">
+              <label>
+                Membership-card number
+                <input name="memberNumber" defaultValue={row?.memberNumber} required minLength={2} maxLength={40} pattern="[A-Za-z0-9-]+" />
+              </label>
+              <label>
+                Phone (Mohala)
+                <input
+                  name="phone"
+                  defaultValue={row?.phone}
+                  inputMode="tel"
+                  required
+                  maxLength={24}
+                  pattern="[+0-9 ()-]+"
+                />
+              </label>
+            </div>
             <label>
               Membership status
               <select
@@ -1292,6 +1372,24 @@ function RecordForm({
         )}
         {["collection", "submission"].includes(kind) && (
           <>
+            {kind === "submission" && (
+              <>
+                <label>
+                  Constituency (Lebatooa)
+                  <input value={row?.constituencyName ?? row?.constituency?.name ?? data.user.constituency ?? ""} readOnly required />
+                </label>
+                <div className="form-grid">
+                  <label>
+                    Branch (Lekala)
+                    <input name="branch" defaultValue={row?.branch ?? data.user.branch ?? ""} required maxLength={100} readOnly={!!row?.branch} />
+                  </label>
+                  <label>
+                    District (Setereke)
+                    <input name="district" defaultValue={row?.district ?? data.user.district ?? ""} required maxLength={100} readOnly={!!row?.district} />
+                  </label>
+                </div>
+              </>
+            )}
             <label>
               Reporting period
               <input
@@ -1496,7 +1594,7 @@ function RecordForm({
               <input
                 type="file"
                 name="audio"
-                accept=".wav,.mp3,.ogg"
+                accept=".wav,.mp3,.ogg,.m4a,.flac"
                 required={!row}
               />
             </label>
@@ -1505,16 +1603,16 @@ function RecordForm({
               <input
                 type="file"
                 name="preview"
-                accept=".wav,.mp3,.ogg"
+                accept=".wav,.mp3,.ogg,.m4a,.flac"
                 required={!row}
               />
             </label>
             <label>
-              Artwork (PNG, JPG, WebP, max 5 MB)
+              Artwork (PNG, JPG, WebP, GIF, AVIF, max 10 MB)
               <input
                 type="file"
                 name="artwork"
-                accept=".png,.jpg,.jpeg,.webp"
+                accept=".png,.jpg,.jpeg,.webp,.gif,.avif"
               />
             </label>
             <label className="checkbox-label">
@@ -1624,7 +1722,7 @@ function RecordForm({
         {kind === "constituency" && (
           <>
             <label>
-              Name
+              Constituency (Lebatooa)
               <input
                 name="name"
                 defaultValue={row?.name || ""}
@@ -1634,20 +1732,21 @@ function RecordForm({
               />
             </label>
             <label>
-              Demo code
+              Constituency number
               <input
                 name="code"
                 defaultValue={row?.code || ""}
-                placeholder="DEMO-C"
-                pattern="DEMO-[A-Z0-9-]+"
+                placeholder="#19"
                 required
+                maxLength={40}
               />
             </label>
             <label>
-              District (optional)
+              District (Setereke)
               <input
                 name="district"
                 defaultValue={row?.district || ""}
+                required
                 maxLength={100}
               />
             </label>
@@ -1655,6 +1754,16 @@ function RecordForm({
         )}
         {kind === "content" && (
           <>
+            {resource === "media" && (
+              <label>
+                Category
+                <select name="mediaCategory" value={mediaCategory} onChange={(event) => setMediaCategory(event.target.value as MediaCategory)}>
+                  {mediaCategories.map((category) => (
+                    <option key={category} value={category}>{mediaLabels[category]}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label>
               Title
               <input
@@ -1675,17 +1784,18 @@ function RecordForm({
               />
             </label>
             <label>
-              Content
+              {resource === "manifesto" ? "Manifesto text" : resource === "media" ? "Content (optional)" : "Content"}
               <textarea
                 name="body"
                 defaultValue={row?.body}
-                required
-                maxLength={20000}
-                rows={5}
+                required={resource !== "media"}
+                maxLength={resource === "manifesto" ? 200000 : 20000}
+                rows={resource === "manifesto" ? 10 : 5}
               />
             </label>
-            {resource === "events" && (
+            {supportsContentAttachment(resource) && (
               <>
+                {resource === "events" && (
                 <label>
                   Event date
                   <input
@@ -1694,18 +1804,41 @@ function RecordForm({
                     defaultValue={dateTimeLocal(row?.eventDate)}
                   />
                 </label>
+                )}
+                {resource === "media" && (
+                  <fieldset className="media-source-control">
+                    <legend>Source</legend>
+                    <div>
+                      <label className={mediaSource === "file" ? "selected" : ""}>
+                        <input type="radio" name="mediaSource" value="file" checked={mediaSource === "file"} onChange={() => setMediaSource("file")} />
+                        <Upload size={16} /> File
+                      </label>
+                      <label className={mediaSource === "link" ? "selected" : ""}>
+                        <input type="radio" name="mediaSource" value="link" checked={mediaSource === "link"} onChange={() => setMediaSource("link")} />
+                        <ArrowUpRight size={16} /> Link
+                      </label>
+                    </div>
+                  </fieldset>
+                )}
+                {resource === "media" && mediaSource === "link" ? (
+                  <label>
+                    Media link
+                    <input type="url" name="externalUrl" defaultValue={row?.externalUrl || ""} placeholder="https://" required maxLength={2000} />
+                  </label>
+                ) : (
                 <label>
-                  Upload file (PDF, max 10 MB)
+                  {resource === "media" ? "Upload file" : "Upload attachment (documents, photos, video, audio, archives)"}
                   <input
+                    key={resource === "media" ? mediaCategory : resource}
                     name="attachment"
                     type="file"
-                    accept=".pdf,application/pdf"
+                    accept={resource === "media" ? acceptedTypesFor(mediaUploadCategories[mediaCategory]) : contentAttachmentAccept}
+                    required={resource === "media" && !row?.storageKey && !row?.image}
                   />
                 </label>
-                {row?.storageKey && (
-                  <p className="form-note">
-                    Existing file will be kept unless a new one is selected.
-                  </p>
+                )}
+                {row?.storageKey && (resource !== "media" || mediaSource === "file") && (
+                  <span className="form-note"><FileText size={14} /> Existing uploaded file</span>
                 )}
               </>
             )}
@@ -1749,149 +1882,6 @@ function RecordForm({
           </button>
         </div>
       </form>
-    </Dialog>
-  );
-}
-function ImportDialog({
-  onClose,
-  onSaved,
-}: {
-  onClose: () => void;
-  onSaved: (message?: string) => void;
-}) {
-  const [csv, setCsv] = useState(""),
-    [preview, setPreview] = useState<{
-      rows: { memberNumber: string; firstName: string; lastName: string }[];
-      errors: { row: number; message: string }[];
-      valid: boolean;
-    } | null>(null),
-    [busy, setBusy] = useState(false),
-    [error, setError] = useState("");
-  async function validate(confirm = false) {
-    setBusy(true);
-    setError("");
-    try {
-      const result = await api("import", { csv, confirm });
-      if (confirm) onSaved(`Imported ${result.count} fictional members.`);
-      else setPreview(result);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Import failed.");
-    } finally {
-      setBusy(false);
-    }
-  }
-  function downloadErrors() {
-    if (!preview) return;
-    const blob = new Blob(
-      [
-        "row,error\n" +
-          preview.errors
-            .map((e) => `${e.row},"${e.message.replaceAll('"', '""')}"`)
-            .join("\n"),
-      ],
-      { type: "text/csv" },
-    );
-    const url = URL.createObjectURL(blob),
-      a = document.createElement("a");
-    a.href = url;
-    a.download = "import-errors.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-  return (
-    <Dialog title="Import membership CSV" onClose={onClose}>
-      <div className="form">
-        <a className="text-link" href="/demo-members.csv" download>
-          <Download size={16} />
-          Download fictional CSV template
-        </a>
-        <label>
-          CSV file (max 1 MB, 500 rows)
-          <input
-            type="file"
-            accept=".csv,text/csv"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (file.size > 1024 * 1024) {
-                setError("Maximum file size is 1 MB.");
-                return;
-              }
-              setCsv(await file.text());
-              setPreview(null);
-              setError("");
-            }}
-          />
-        </label>
-        <button
-          className="button button-outline"
-          disabled={!csv || busy}
-          onClick={() => validate()}
-        >
-          <ShieldCheck size={17} />
-          Validate & preview
-        </button>
-        {preview && (
-          <>
-            {preview.errors.length ? (
-              <div className="import-errors" role="alert">
-                <strong>{preview.errors.length} validation error(s)</strong>
-                {preview.errors.map((e, i) => (
-                  <p key={i}>
-                    Row {e.row}: {e.message}
-                  </p>
-                ))}
-                <button className="text-link" onClick={downloadErrors}>
-                  <Download size={16} />
-                  Download error report
-                </button>
-              </div>
-            ) : (
-              <div className="success-notice">
-                <CheckCircle2 size={17} />
-                {preview.rows.length} valid fictional records
-              </div>
-            )}
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Member number</th>
-                    <th>Name</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {preview.rows.slice(0, 10).map((r) => (
-                    <tr key={r.memberNumber}>
-                      <td>{r.memberNumber}</td>
-                      <td>
-                        {r.firstName} {r.lastName}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button
-              className="button button-red"
-              disabled={!preview.valid || busy}
-              onClick={() => validate(true)}
-            >
-              {busy ? (
-                <LoaderCircle size={17} className="spin" />
-              ) : (
-                <Upload size={17} />
-              )}
-              Confirm import
-            </button>
-          </>
-        )}
-        {error && (
-          <p className="error" role="alert">
-            {error}
-          </p>
-        )}
-      </div>
     </Dialog>
   );
 }

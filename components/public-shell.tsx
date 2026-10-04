@@ -112,7 +112,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
               (key) => (
                 <Link
                   className={
-                    (key === "home" ? path === "/" : path === `/${key}`)
+                    (key === "home" ? path === "/" : key === "about" ? ["/about", "/manifesto"].includes(path) : path === `/${key}`)
                       ? "active"
                       : ""
                   }
@@ -144,7 +144,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
             id="mobile-nav"
             aria-label="Mobile navigation"
           >
-            {["home", ...publicRoutes].map((key) => (
+            {["home", ...publicRoutes.filter((route) => route !== "manifesto")].map((key) => (
               <Link
                 key={key}
                 onClick={() => setOpen(false)}
@@ -172,7 +172,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           </div>
           <div>
             <h3>{t("about")}</h3>
-            {["about", "leadership", "policies", "manifesto", "candidates"].map(
+            {["about", "leadership", "policies", "candidates"].map(
               (k) => (
                 <Link key={k} href={`/${k}`}>
                   {t(k as TranslationKey)}

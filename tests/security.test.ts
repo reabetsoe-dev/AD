@@ -2,6 +2,7 @@ import { test, before, after } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
+import { PDFDocument, PDFArray, PDFRawStream, decodePDFRawStream } from "pdf-lib";
 import { loadEnvConfig } from "@next/env";
 loadEnvConfig(process.cwd());
 import { db } from "../lib/db";
@@ -618,6 +619,54 @@ test("Administrator can attach a PDF when creating an event", async () => {
   assert.equal(content.kind, "events");
   assert.ok(content.storageKey?.startsWith("document/"));
 });
+
+test("Administrator can attach media files when creating events", async () => {
+  const files = [
+    {
+      suffix: "photo",
+      file: new File(
+        [Buffer.from("89504e470d0a1a0a", "hex")],
+        "event-photo.png",
+        { type: "image/png" },
+      ),
+      prefix: "image/",
+    },
+    {
+      suffix: "video",
+      file: new File(
+        [Buffer.from([0, 0, 0, 24, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d])],
+        "event-video.mp4",
+        { type: "video/mp4" },
+      ),
+      prefix: "video/",
+    },
+    {
+      suffix: "audio",
+      file: new File([Buffer.from("ID3temporary")], "event-audio.mp3", {
+        type: "audio/mpeg",
+      }),
+      prefix: "audio/",
+    },
+  ];
+  for (const sample of files) {
+    const title = `${runId} event ${sample.suffix} upload`;
+    const form = new FormData();
+    form.set("title", title);
+    form.set("summary", `Fictional event ${sample.suffix} upload test`);
+    form.set("body", "Temporary event created with a mixed media attachment.");
+    form.set("eventDate", "2026-10-15T10:00");
+    form.set("attachment", sample.file);
+    const response = await fetch(`${base}/api/internal/events`, {
+      method: "POST",
+      headers: { Cookie: sessions.admin, Origin: base },
+      body: form,
+    });
+    assert.equal(response.status, 200, await response.clone().text());
+    const content = await db.content.findFirstOrThrow({ where: { title } });
+    adminTestEntities.push(content.id);
+    assert.ok(content.storageKey?.startsWith(sample.prefix));
+  }
+});
 test("CSV validation rejects invalid rows, duplicate IDs, and supplied constituency fields", () => {
   assert.equal(
     parseMembers(
@@ -676,20 +725,37 @@ test("membership import preview inserts nothing; confirmation imports into A", a
   );
 });
 test("membership submission preserves its member snapshot", async () => {
-  assert.equal(
-    (
-      await request("/api/internal/submissions", sessions["secretary-a"], {
+  const originalMember = {
+    memberNumber: `${runId}-FORM`,
+    firstName: "BeforeSnapshot",
+    lastName: "Fictional",
+    gender: "F",
+    idNumber: "DEMO-IEC-FORM",
+    village: "Fictional village",
+    phone: "+266 5000 0000",
+  };
+  assert.equal((await request("/api/internal/members", sessions["secretary-a"], originalMember)).status, 200);
+  const response = await request("/api/internal/submissions", sessions["secretary-a"], {
         reportingPeriod: runId,
+        branch: "Fictional branch",
+        district: "Fictional district",
         notes: "Fictional test submission",
-      })
-    ).status,
-    200,
-  );
+  });
+  assert.equal(response.status, 200);
+  const { downloadUrl } = await response.json();
   const submission = await db.membershipSubmission.findFirstOrThrow({
     where: { reportingPeriod: runId },
   });
   assert.equal(submission.constituencyId, a);
   assert.ok(Array.isArray(submission.snapshot));
+  assert.equal(submission.constituencyName, "Demonstration Constituency A");
+  assert.equal(submission.branch, "Fictional branch");
+  assert.equal(submission.district, "Fictional district");
+  assert.ok((submission.snapshot as { idNumber?: string }[]).some((member) => member.idNumber === originalMember.idNumber));
+  await db.member.updateMany({
+    where: { constituencyId: a, memberNumber: originalMember.memberNumber },
+    data: { firstName: "AfterSnapshot", village: "Changed village" },
+  });
   await db.member.create({
     data: {
       constituencyId: a,
@@ -702,6 +768,40 @@ test("membership submission preserves its member snapshot", async () => {
     where: { id: submission.id },
   });
   assert.deepEqual(unchanged.snapshot, submission.snapshot);
+  const download = await request(downloadUrl, sessions["secretary-a"]);
+  assert.equal(download.status, 200);
+  assert.equal(download.headers.get("content-type"), "application/pdf");
+  assert.match(download.headers.get("content-disposition") || "", /\.pdf"$/);
+  const pdf = await PDFDocument.load(await download.arrayBuffer());
+  const firstPage = pdf.getPage(0);
+  assert.ok(firstPage.getWidth() > firstPage.getHeight());
+  let content = "";
+  for (const page of pdf.getPages()) {
+    const contents = page.node.Contents();
+    const streams = contents instanceof PDFArray ? contents.asArray() : [contents];
+    for (const ref of streams) {
+      const stream = pdf.context.lookup(ref);
+      if (stream instanceof PDFRawStream) {
+        const commands = Buffer.from(decodePDFRawStream(stream).decode()).toString("latin1");
+        content += Array.from(commands.matchAll(/<([0-9A-F]+)>\s*Tj/gi), (match) => Buffer.from(match[1], "hex").toString("latin1")).join(" ");
+      }
+    }
+  }
+  assert.match(content, /BeforeSnapshot/);
+  assert.match(content, /DEMO-IEC-FORM/);
+  assert.match(content, /Fictional branch/);
+  assert.doesNotMatch(content, /AfterSnapshot|Changed village/);
+  assert.equal((await request(downloadUrl, sessions["secretary-b"])).status, 404);
+  assert.equal((await request(downloadUrl, sessions.finance)).status, 403);
+});
+
+test("member creation rejects missing paper form fields and constituency creation requires district", async () => {
+  assert.equal((await request("/api/internal/members", sessions["secretary-a"], {
+    memberNumber: `${runId}-INCOMPLETE`, firstName: "Incomplete", lastName: "Member",
+  })).status, 400);
+  assert.equal((await request("/api/internal/constituencies", sessions.admin, {
+    name: "Incomplete constituency", code: "#19",
+  })).status, 400);
 });
 test("collection reference stays pending and requires an authorised independent verifier", async () => {
   assert.equal(
@@ -956,6 +1056,10 @@ test("administrators can edit and remove members while constituency removal stay
       memberNumber: member.memberNumber,
       firstName: "Updated",
       lastName: member.lastName,
+      gender: "F",
+      idNumber: "DEMO-IEC-123",
+      village: "Fictional village",
+      phone: "+266 5000 0000",
       membershipStatus: "INACTIVE",
     })).status,
     200,

@@ -16,6 +16,7 @@ async function main() {
       name: "Demonstration Constituency A",
       code: "DEMO-A",
       district: "Fictional district",
+      branch: "Fictional branch A",
     },
     update: {},
   });
@@ -25,6 +26,7 @@ async function main() {
       name: "Demonstration Constituency B",
       code: "DEMO-B",
       district: "Fictional district",
+      branch: "Fictional branch B",
     },
     update: {},
   });
@@ -78,6 +80,10 @@ async function main() {
           memberNumber: `${c.code}-${String(i).padStart(3, "0")}`,
           firstName: `Demo Member ${i}`,
           lastName: c.code,
+          gender: i % 2 === 0 ? "F" : "M",
+          idNumber: `DEMO-IEC-${c.code}-${i}`,
+          village: "Fictional village",
+          phone: "+266 5000 0000",
         },
         update: {},
       });
@@ -155,6 +161,10 @@ async function main() {
         memberNumber: true,
         firstName: true,
         lastName: true,
+        gender: true,
+        idNumber: true,
+        village: true,
+        phone: true,
         membershipStatus: true,
       },
     });
@@ -163,6 +173,9 @@ async function main() {
         constituencyId: a.id,
         submittedById: secretary.id,
         reportingPeriod: "September 2026 (demo)",
+        constituencyName: a.name,
+        branch: a.branch,
+        district: a.district,
         memberCount: members.length,
         snapshot: members,
         status: "SUBMITTED",

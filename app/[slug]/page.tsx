@@ -21,5 +21,5 @@ export default async function Page({
   const { slug } = await params;
   if (slug === "news") redirect("/");
   if (!routes.includes(slug)) notFound();
-  return <PublicPage slug={slug} content={await publicContent(slug)} />;
+  return <PublicPage slug={slug} content={await publicContent(slug === "about" ? "manifesto" : slug)} />;
 }

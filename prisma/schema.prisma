@@ -105,6 +105,7 @@ model Constituency {
   name        String
   code        String @unique
   district    String?
+  branch      String?
   status      String @default("DEMO")
   users       User[]
   members     Member[]
@@ -119,6 +120,9 @@ model Member {
   firstName        String
   lastName         String
   phone            String?
+  gender           String?
+  idNumber         String?
+  village          String?
   membershipStatus String @default("ACTIVE")
   joinedAt         DateTime @default(now())
   constituencyId   String
@@ -135,6 +139,9 @@ model MembershipSubmission {
   submittedById  String
   submittedBy    User @relation(fields:[submittedById], references:[id])
   reportingPeriod String
+  constituencyName String?
+  branch         String?
+  district       String?
   memberCount    Int
   status         ReviewStatus @default(SUBMITTED)
   notes          String?
@@ -237,6 +244,8 @@ model Content {
   body        String
   image       String?
   storageKey  String?
+  mediaCategory String?
+  externalUrl String?
   isPublished Boolean @default(false)
   eventDate   DateTime?
   createdAt   DateTime @default(now())

@@ -65,19 +65,14 @@ uploads, videos and advanced editorial CMS tools are a later phase.
 
 1. Sign out and sign in as secretary-a@demo.invalid.
 2. Show the assigned Demonstration Constituency A prominently on the screen.
-3. Add a fictional member. Edit that member if desired.
-4. Open Import CSV and download the fictional template. Select the CSV file.
-5. Choose Validate & preview. No rows are saved at this point.
-6. Choose Confirm import. The server imports into the assigned constituency.
-7. For an error example, repeat the same CSV; duplicate member numbers are
-   rejected and a row-error CSV is available.
-8. Open Submit membership. Enter a period and submit. Show the saved snapshot
-   count in Submission history.
-9. Open Collections and create a report with a fictional amount and
+3. Add a fictional member with first name, surname, sex, ID or IEC number,
+   village, membership-card number and phone.
+4. Use the download icon to export the branded landscape membership form.
+5. Open Submit membership. Enter branch, district and a period, then submit.
+   The saved form downloads as a PDF. Submission history has a download icon
+   for each original snapshot, including its constituency, branch and district.
+6. Open Collections and create a report with a fictional amount and
    DEMO-COLLECTION reference. Show PENDING VERIFICATION immediately afterwards.
-
-The template is reusable only with new fictional member numbers: duplicates
-are correctly blocked. No spreadsheet rows are inserted before confirmation.
 
 ## Finance and Isolation
 
@@ -85,7 +80,7 @@ are correctly blocked. No spreadsheet rows are inserted before confirmation.
 2. Open Collections. Review a pending report.
 3. Choose Verified (simulation), enter the independently simulated amount and
    notes. Show VERIFIED and the recorded reported/verified amounts.
-4. Open Reports for the difference and CSV export. Payments shows demo music
+4. Open Reports for the difference and PDF export. Payments shows demo music
    transactions. Finance has no individual-membership screen.
 5. Sign in as Secretary A and show the constituency list. Sign out and sign
    in as Secretary B; only B's fictional membership appears.

@@ -6,6 +6,7 @@ import {
   ArrowUpRight,
   CalendarDays,
   Download,
+  FileArchive,
   FileText,
   Music2,
   Play,
@@ -15,18 +16,19 @@ import {
   CheckCircle2,
   Smartphone,
   LoaderCircle,
-  Image as ImageIcon,
   Users,
+  UserRoundSearch,
 } from "lucide-react";
 import { usePlatform } from "./platform-provider";
 import { Dialog } from "./dialog";
+import { MediaLibrary } from "./media-library";
 import type { PublicContent, PublicTrack } from "@/lib/public-data";
 import type { TranslationKey } from "@/lib/translations";
 export const money = (price: string | number, currency = "LSL") =>
   new Intl.NumberFormat("en-LS", { style: "currency", currency }).format(
     Number(price),
   );
-export function Homepage() {
+export function Homepage({ events }: { events: PublicContent[] }) {
   const { t } = usePlatform();
   return (
     <>
@@ -51,6 +53,18 @@ export function Homepage() {
               {t("discover")}
               <ArrowRight size={18} />
             </Link>
+            <a
+              className="button button-outline"
+              href="https://selfreg.iec.org.ls/"
+              target="_blank"
+              rel="noopener noreferrer"
+              referrerPolicy="no-referrer"
+              title="Official IEC Lesotho registration service (opens in a new tab)"
+            >
+              <UserRoundSearch size={18} />
+              {t("checkVoterRegistration")}
+              <ArrowUpRight size={16} />
+            </a>
           </div>
         </div>
         <div className="hero-bottom">
@@ -66,7 +80,7 @@ export function Homepage() {
             <img src="/ad-logo.png" alt="Supplied Alliance of Democrats logo" />
           </div>
           <div>
-            <span className="eyebrow">{t("about")}</span>
+            <span className="eyebrow">ALLIANCE OF DEMOCRATS</span>
             <h2>{t("aboutTitle")}</h2>
             <p>{t("aboutIntro")}</p>
             <Link className="text-link" href="/about">
@@ -75,6 +89,19 @@ export function Homepage() {
             </Link>
           </div>
         </div>
+      </section>
+      <section
+        className="container section events-home"
+        aria-labelledby="home-events-title"
+      >
+        <div className="section-heading">
+          <h2 id="home-events-title">{t("events")}</h2>
+          <Link className="text-link" href="/events">
+            {t("viewEvents")}
+            <ArrowUpRight size={18} />
+          </Link>
+        </div>
+        <EventList content={events} headingAs="h3" />
       </section>
       <section className="container section media-home">
         <div>
@@ -139,9 +166,11 @@ export function Homepage() {
 function PageHeading({
   slug,
   description,
+  title,
 }: {
   slug: string;
   description?: string;
+  title?: string;
 }) {
   const { t } = usePlatform();
   return (
@@ -153,7 +182,7 @@ function PageHeading({
           <span>{t(slug as TranslationKey)}</span>
         </div>
         <span className="eyebrow">ALLIANCE OF DEMOCRATS</span>
-        <h1>{t(slug as TranslationKey)}</h1>
+        <h1>{title ?? t(slug as TranslationKey)}</h1>
         {description && <p>{description}</p>}
       </div>
     </div>
@@ -166,65 +195,70 @@ export function PublicPage({
   slug: string;
   content: PublicContent[];
 }) {
-  const { t } = usePlatform(),
-    [article, setArticle] = useState<PublicContent | null>(null),
-    [filter, setFilter] = useState("All"),
-    [photo, setPhoto] = useState<PublicContent | null>(null);
+  const { t } = usePlatform();
   if (slug === "music") return <MusicStore />;
+  const isManifesto = slug === "about" || slug === "manifesto";
   return (
     <>
       <PageHeading
         slug={slug}
-        description={slug === "contact" ? t("contactNote") : undefined}
+        title={isManifesto ? t("manifestoPageTitle") : undefined}
+        description={
+          isManifesto
+            ? t("manifestoPageDescription")
+            : slug === "contact"
+              ? t("contactNote")
+              : undefined
+        }
       />
       <section className="container section public-page-content">
-        {slug === "about" && (
+        {isManifesto && (content[0] ? <PublishedManifesto manifesto={content[0]} /> : (
           <div className="about-page">
             <img src="/ad-logo.png" alt="Supplied AD logo" />
             <div>
               <span className="eyebrow">LESOTHO · PELE-FEELA</span>
-              <h2>{t("tagline")}</h2>
-              <p>{t("aboutBody")}</p>
+              <h2>{t("manifestoStatementTitle")}</h2>
+              <p className="manifesto-lede">{t("manifestoLead")}</p>
+              <div className="manifesto-pillar-list">
+                <article>
+                  <ShieldCheck size={20} />
+                  <div>
+                    <h3>{t("manifestoAccountabilityTitle")}</h3>
+                    <p>{t("manifestoAccountabilityText")}</p>
+                  </div>
+                </article>
+                <article>
+                  <Users size={20} />
+                  <div>
+                    <h3>{t("manifestoServicesTitle")}</h3>
+                    <p>{t("manifestoServicesText")}</p>
+                  </div>
+                </article>
+                <article>
+                  <CheckCircle2 size={20} />
+                  <div>
+                    <h3>{t("manifestoOpportunityTitle")}</h3>
+                    <p>{t("manifestoOpportunityText")}</p>
+                  </div>
+                </article>
+                <article>
+                  <FileText size={20} />
+                  <div>
+                    <h3>{t("manifestoParticipationTitle")}</h3>
+                    <p>{t("manifestoParticipationText")}</p>
+                  </div>
+                </article>
+              </div>
               <div className="divider" />
-              <p>{t("aboutIntro")}</p>
-              <Link className="button button-red" href="/portal/login">
-                {t("portal")}
+              <p>{t("manifestoBody")}</p>
+              <Link className="button button-red" href="/documents">
+                {t("manifestoDocumentsCta")}
                 <ArrowRight size={17} />
               </Link>
             </div>
           </div>
-        )}
-        {slug === "events" && (
-          <div className="event-list">
-            {content.map((c) => (
-              <article key={c.id} className="event-row">
-                <div className="event-date">
-                  <strong>
-                    {c.eventDate ? new Date(c.eventDate).getUTCDate() : "--"}
-                  </strong>
-                  <span>
-                    {c.eventDate
-                      ? new Date(c.eventDate).toLocaleDateString("en-GB", {
-                          month: "short",
-                        })
-                      : ""}
-                  </span>
-                </div>
-                <div>
-                  <h2>{c.title}</h2>
-                  <p>{c.summary}</p>
-                </div>
-                <button
-                  className="icon-button"
-                  aria-label={`View ${c.title}`}
-                  onClick={() => setArticle(c)}
-                >
-                  <ArrowUpRight />
-                </button>
-              </article>
-            ))}
-          </div>
-        )}
+        ))}
+        {slug === "events" && <EventList content={content} />}
         {slug === "documents" && (
           <div className="document-list">
             {content.map((c) => (
@@ -246,80 +280,154 @@ export function PublicPage({
             ))}
           </div>
         )}
-        {slug === "media" && (
-          <>
-            <div className="tabs">
-              {["All", "Photos", "Videos", "Music", "Speeches", "Press"].map(
-                (f) => (
-                  <button
-                    key={f}
-                    className={filter === f ? "active" : ""}
-                    onClick={() => setFilter(f)}
-                  >
-                    {f}
-                  </button>
-                ),
-              )}
-            </div>
-            {["All", "Photos"].includes(filter) && (
-              <div className="media-grid">
-                {content.map((c) => (
-                  <button
-                    className="media-item"
-                    key={c.id}
-                    onClick={() => setPhoto(c)}
-                  >
-                    <img src={c.image || "/ad-logo.png"} alt={c.title} />
-                    <div>
-                      <ImageIcon size={16} />
-                      <span>{c.title}</span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-            {["All", "Music"].includes(filter) && (
-              <Link className="media-music-link" href="/music">
-                <Music2 size={24} />
-                <div>
-                  <strong>{t("music")}</strong>
-                  <p>{t("musicDescription")}</p>
-                </div>
-                <ArrowRight size={20} />
-              </Link>
-            )}
-            {["Videos", "Speeches", "Press"].includes(filter) && (
-              <EmptyContent />
-            )}
-            {!content.length && ["All", "Photos"].includes(filter) && (
-              <EmptyContent />
-            )}
-          </>
-        )}
+        {slug === "media" && <MediaLibrary content={content} empty={<EmptyContent />} />}
         {slug === "contact" && <ContactForm />}
-        {["leadership", "policies", "manifesto", "candidates"].includes(
+        {["leadership", "policies", "candidates"].includes(
           slug,
         ) && <EmptyContent />}
-        {!content.length && ["events", "documents"].includes(slug) && (
+        {!content.length && slug === "documents" && (
           <EmptyContent />
         )}
       </section>
+    </>
+  );
+}
+function EventList({
+  content,
+  headingAs: Heading = "h2",
+}: {
+  content: PublicContent[];
+  headingAs?: "h2" | "h3";
+}) {
+  const { t } = usePlatform();
+  const [article, setArticle] = useState<PublicContent | null>(null);
+  if (!content.length) return <EmptyContent />;
+  return (
+    <>
+      <div className="event-list">
+        {content.map((event) => (
+          <article key={event.id} className="event-row">
+            <div className="event-date">
+              <strong>
+                {event.eventDate ? new Date(event.eventDate).getUTCDate() : "--"}
+              </strong>
+              <span>
+                {event.eventDate
+                  ? new Date(event.eventDate).toLocaleDateString("en-GB", {
+                      month: "short",
+                      timeZone: "UTC",
+                    })
+                  : ""}
+              </span>
+            </div>
+            <div className="event-info">
+              <Heading>{event.title}</Heading>
+              <p>{event.summary}</p>
+            </div>
+            <EventAttachmentPreview content={event} variant="row" />
+            <button
+              className="icon-button"
+              aria-label={`View ${event.title}`}
+              title={`View ${event.title}`}
+              onClick={() => setArticle(event)}
+            >
+              <ArrowUpRight />
+            </button>
+          </article>
+        ))}
+      </div>
       {article && (
         <Dialog title={article.title} onClose={() => setArticle(null)}>
+          <EventAttachmentPreview content={article} variant="dialog" />
           <p className="article-body">{article.body}</p>
-        </Dialog>
-      )}
-      {photo && (
-        <Dialog title={photo.title} onClose={() => setPhoto(null)}>
-          <img
-            className="lightbox-image"
-            src={photo.image || "/ad-logo.png"}
-            alt={photo.title}
-          />
-          <p>{photo.summary}</p>
+          {article.hasAttachment && (
+            <a
+              className="button button-outline"
+              href={
+                article.attachment?.downloadUrl || `/api/documents/${article.id}`
+              }
+              download
+            >
+              <Download size={17} />
+              {t("download")}
+            </a>
+          )}
         </Dialog>
       )}
     </>
+  );
+}
+
+function EventAttachmentPreview({
+  content,
+  variant,
+}: {
+  content: PublicContent;
+  variant: "row" | "dialog";
+}) {
+  const attachment = content.attachment;
+  if (!attachment) return null;
+  const className = `event-file event-file-${variant}`;
+  const label = `${content.title} uploaded file`;
+  if (attachment.category === "image")
+    return (
+      <div className={`${className} event-file-image`}>
+        <img src={attachment.url} alt={label} />
+      </div>
+    );
+  if (attachment.category === "video")
+    return (
+      <div className={`${className} event-file-video`}>
+        <video src={attachment.url} controls preload="metadata" title={label} />
+      </div>
+    );
+  if (attachment.category === "audio")
+    return (
+      <div className={`${className} event-file-audio`}>
+        <div className="event-file-label">
+          <Music2 size={18} />
+          <span>Uploaded audio</span>
+        </div>
+        <audio src={attachment.url} controls preload="metadata" />
+      </div>
+    );
+  const Icon = attachment.category === "archive" ? FileArchive : FileText;
+  return (
+    <a
+      className={`${className} event-file-download`}
+      href={attachment.downloadUrl}
+      download
+    >
+      <Icon size={20} />
+      <span>
+        <strong>Uploaded file</strong>
+        <small>{attachment.extension.replace(".", "").toUpperCase()}</small>
+      </span>
+    </a>
+  );
+}
+
+function PublishedManifesto({ manifesto }: { manifesto: PublicContent }) {
+  const { t } = usePlatform();
+  return (
+    <article className="manifesto-content">
+      <header className="manifesto-header">
+        <img src="/ad-logo.png" alt="Alliance of Democrats logo" width={108} height={72} />
+        <div>
+          <h2>{manifesto.title}</h2>
+          <p>{manifesto.summary}</p>
+        </div>
+      </header>
+      {manifesto.hasAttachment && (
+        <div className="manifesto-actions">
+          <a className="button button-outline" href={`/api/documents/${encodeURIComponent(manifesto.id)}`}>
+            <Download size={18} />
+            {t("downloadManifesto")}
+          </a>
+        </div>
+      )}
+      <div className="manifesto-text">{manifesto.body}</div>
+    </article>
   );
 }
 function EmptyContent() {

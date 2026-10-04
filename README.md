@@ -84,7 +84,7 @@ filesystem storage. Payments remain simulated in this hosted demonstration.
           |                  |                  |
      PUBLIC WEBSITE     ADMINISTRATION     CONSTITUENCY PORTAL
      News / Media       Content / Music    Assigned membership
-     Music / Resources  Users / Finance    Imports / Submissions
+     Music / Resources  Users / Finance    Members / Submissions
           |                  |                  |
           +---------- Next.js server -----------+
                              |
@@ -103,7 +103,11 @@ Next.js App Router, React, TypeScript, Prisma and PostgreSQL provide the runtime
 Better Auth manages passwords and database sessions. Zod validates input;
 Papa Parse parses CSV files; Lucide supplies icons. A shared CSS stylesheet is
 used instead of adding a Tailwind layer in this first version. There is no
-custom cryptography or homemade authentication.
+custom cryptography or homemade authentication. Membership forms use pdf-lib
+to produce branded A4 landscape PDFs with the Sesotho headings from the supplied
+paper form. Constituencies require a branch and district; members require first
+name, surname, sex, ID or IEC number, village, membership-card number and phone.
+Submissions keep these details as a snapshot and download the completed form.
 
 Routes use Server Components to load public data and authorize workspaces.
 Client Components handle forms, dialogs, language preferences and the player.
@@ -114,15 +118,22 @@ payment confirmation, imports, submissions and reviews consistent.
 
 Public routes: `/`, `/about`, `/leadership`, `/policies`, `/manifesto`,
 `/candidates`, `/news`, `/events`, `/media`, `/music`, `/documents`, `/contact`.
-Sections without published content display neutral empty states. Seeded sample
+Most sections without published content display neutral empty states. Seeded sample
 news, events, media, documents and synthesized tracks are unpublished by default
 and remain available internally. Publish approved material through Administration.
 To unpublish the original samples in an existing local database without deleting
 them, run `node scripts/unpublish-samples.mjs`. The cleanup matches only the
 known sample identifiers and titles and records the changes in the audit log.
 
+About AD (`/about`) now focuses on **The Manifesto**. `/manifesto` shows the same
+manifesto content. The page retains the manifesto overview until an approved
+edition is published in `/admin/manifesto`. Editors can enter its title, summary
+and full text, attach a PDF, and publish or unpublish it. The newest published
+edition appears on both public pages. Draft editions and their attachments are
+not publicly accessible; uploaded PDFs are served only while published.
+
 Administration: `/admin`, `/admin/content`, `/admin/news`, `/admin/events`,
-`/admin/media`, `/admin/music`, `/admin/documents`, `/admin/constituencies`,
+`/admin/media`, `/admin/music`, `/admin/documents`, `/admin/manifesto`, `/admin/constituencies`,
 `/admin/membership`, `/admin/collections`, `/admin/payments`, `/admin/reports`,
 `/admin/users`, `/admin/audit`. Unauthorized sections return a not-found page;
 their APIs return 403. Anonymous workspace visits redirect to login.
@@ -158,12 +169,18 @@ management screen is blocked. Login has database-backed rate limits.
 
 ## Membership and Finance
 
-Members use only number, name, optional phone, status and joining timestamps.
-CSV import follows file selection, server parsing and validation, preview,
-explicit confirmation, a transactional insert, and an audit record. It checks
-required headers, duplicate numbers, valid statuses, row counts and rejected
-constituency/role columns. Limits: 1 MB and 500 rows per import. Errors can be
-downloaded as CSV. Private source files stay outside `/public`.
+Members require name, sex, ID or IEC number, village, membership-card number
+and phone, alongside membership status and joining timestamps.
+The portal membership screen supports manual add/edit without exposing the old
+CSV import workflow. The server-side import parser remains covered for
+controlled data-loading paths and keeps private source files outside `/public`.
+
+The public home page includes **Check Voter Registration** beside **Discover
+AD**, available without signing in. It opens the
+[official IEC Lesotho self-service portal](https://selfreg.iec.org.ls/)
+in a separate tab without passing identity details or a referrer. The IEC
+portal provides the result through its **Check Your Status** action. Automatic
+verification would require a documented IEC API and access supplied by IEC.
 
 Submissions preserve a member snapshot and count. Subsequent member changes do
 not change that snapshot. Admin review changes status and writes an audit
@@ -175,8 +192,8 @@ or rejection, with notes, verifier and timestamp. Reports preserve expected,
 reported and verified amounts separately. Final decisions cannot be silently
 replaced. Reconciliation is a basic collection summary, not a full accounting
 ledger. Supporting-document uploads and post-verification adjustment workflows
-are deferred. CSV exports require the same role and constituency checks and
-are audited. Formula-like strings are escaped in exported records.
+are deferred. PDF exports require the same role and constituency checks and
+are audited.
 
 ## Music and Payments
 
